@@ -15,6 +15,9 @@ task-relevant context packet before work.
 - Expands cues into related entities, timeline evidence, semantic neighbors,
   and project scope.
 - Builds compact context packets with provenance and uncertainty labels.
+- Uses hierarchical / coarse-to-fine retrieval: field summary first,
+  checkpoint nodes next, episodes only when needed, and source pointers for
+  evidence-sensitive work.
 - Keeps identity, relationship, project, procedural, semantic, and episodic
   memory separate.
 - Uses candidate review and branch quorum for durable memory changes.
@@ -44,6 +47,21 @@ python3 -m venv .venv
 .venv/bin/lml retrieve "who am I working with and what project is active?"
 .venv/bin/lml context "continue the current project" --scope example-project
 ```
+
+## Retrieval Levels
+
+LML treats long memory as a navigable stack, not a document to load wholesale:
+
+```text
+Level 0: field or dream summary
+Level 1: checkpoint / semantic node
+Level 2: episode / dated evidence
+Level 3: source pointer / full artifact reference
+```
+
+Normal cues usually stop at Level 1. Cues that ask for evidence, chronology,
+conflict handling, audit, or deeper detail automatically drill down to related
+episodes and expose source pointers in the generated context packet.
 
 ## Dashboard
 

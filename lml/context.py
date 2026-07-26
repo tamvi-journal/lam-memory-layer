@@ -66,6 +66,9 @@ class ContextPacketBuilder:
         groups: dict[str, list[RetrievalHit]] = {}
         for hit in hits:
             groups.setdefault(hit.node["kind"], []).append(hit)
+        level_counts: dict[int, int] = {}
+        for hit in hits:
+            level_counts[hit.level] = level_counts.get(hit.level, 0) + 1
 
         lines = [
             "# LAM CONTEXT PACKET",
@@ -88,6 +91,22 @@ class ContextPacketBuilder:
             "- This is a task-scoped control signal, not a consciousness claim.",
             "",
         ]
+        if hits:
+            level_summary = ", ".join(
+                f"Level {level}: {count}" for level, count in sorted(level_counts.items())
+            )
+            source_pointers = sum(1 for hit in hits if "Level 3: source pointer" in hit.path)
+            lines.extend(
+                [
+                    "## Retrieval path",
+                    "",
+                    "- Mode: hierarchical / coarse-to-fine retrieval.",
+                    f"- Selected memory levels: {level_summary}.",
+                    f"- Source pointers available: {source_pointers}.",
+                    "- Drill-down policy: open episodes and source pointers only when the cue asks for evidence, chronology, conflict, audit, or deeper detail.",
+                    "",
+                ]
+            )
         latest_dream = self.retriever.store.dream_runs(limit=1)
         if latest_dream:
             dream = latest_dream[0]
@@ -188,6 +207,7 @@ class ContextPacketBuilder:
                     f"- source: {node['source_type']} `{node['source_ref']}` | "
                     f"retrieval: {', '.join(hit.reasons[:3] if compact else hit.reasons[:5])}"
                 )
+                lines.append(f"- memory path: {' > '.join(hit.path)}")
                 lines.append("")
 
         lines.extend(

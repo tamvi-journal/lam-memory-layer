@@ -15,6 +15,9 @@ class RetrievalHit:
     node: dict[str, Any]
     score: float
     reasons: list[str] = field(default_factory=list)
+    level: int = 1
+    resolution: str = "checkpoint"
+    path: list[str] = field(default_factory=list)
 
 
 class CueRetriever:
@@ -39,6 +42,7 @@ class CueRetriever:
     ) -> list[RetrievalHit]:
         norm = normalize_text(query)
         query_tokens = set(tokens(query))
+        drill_policy = drill_down_policy(query)
         nodes = {node["id"]: node for node in self.store.active_nodes()}
         scores: dict[str, float] = {node_id: 0.0 for node_id in nodes}
         reasons: dict[str, list[str]] = {node_id: [] for node_id in nodes}
@@ -129,7 +133,7 @@ class CueRetriever:
                     pass
 
         candidates = [
-            RetrievalHit(nodes[node_id], score, reasons[node_id])
+            self._hit(nodes[node_id], score, reasons[node_id], drill_policy=drill_policy)
             for node_id, score in scores.items()
             if score > 0.18
         ]
@@ -182,6 +186,17 @@ class CueRetriever:
             selected_ids.add(hit.node["id"])
             spent += node_tokens
 
+        if drill_policy["enabled"]:
+            self._annotate_selected_drill_down(selected, selected_ids, drill_policy)
+            spent = self._drill_down(
+                selected,
+                selected_ids,
+                spent=spent,
+                limit=limit,
+                token_budget=token_budget,
+                policy=drill_policy,
+            )
+
         explanation = {
             "direct_cues": sorted(direct_ids),
             "selected_scores": {hit.node["id"]: round(hit.score, 4) for hit in selected},
@@ -189,6 +204,177 @@ class CueRetriever:
             "token_budget": token_budget,
             "required_over_budget": spent > token_budget,
             "graph_depth": graph_depth,
+            "drill_down": drill_policy,
+            "levels": {hit.node["id"]: hit.level for hit in selected},
         }
         self.store.log_retrieval(query, scope, [hit.node["id"] for hit in selected], explanation)
         return selected
+
+    def _annotate_selected_drill_down(
+        self,
+        selected: list[RetrievalHit],
+        selected_ids: set[str],
+        policy: dict[str, Any],
+    ) -> None:
+        parents = [hit for hit in selected if hit.level <= 1]
+        episodes = [hit for hit in selected if hit.level == 2]
+        for episode in episodes:
+            if any(reason.startswith("drilldown:") for reason in episode.reasons):
+                continue
+            for parent in parents:
+                if parent.node["id"] not in selected_ids:
+                    continue
+                neighbor_ids = {item["id"] for item in self.store.neighbors(parent.node["id"])}
+                if episode.node["id"] in neighbor_ids:
+                    episode.reasons.append(f"drilldown:{parent.node['id']}")
+                    episode.reasons.extend(policy["triggers"])
+                    episode.path.insert(1, f"parent: {parent.node['id']}")
+                    break
+
+    def _hit(
+        self,
+        node: dict[str, Any],
+        score: float,
+        reasons: list[str],
+        *,
+        drill_policy: dict[str, Any],
+        parent_id: str = "",
+    ) -> RetrievalHit:
+        level, resolution = memory_resolution(node)
+        path = ["Level 0: field summary", f"Level {level}: {resolution}"]
+        source_ref = str(node.get("source_ref", ""))
+        if source_ref and drill_policy["include_source_pointer"]:
+            path.append("Level 3: source pointer")
+        if parent_id:
+            path.insert(1, f"parent: {parent_id}")
+        return RetrievalHit(
+            node=node,
+            score=score,
+            reasons=[*reasons],
+            level=level,
+            resolution=resolution,
+            path=path,
+        )
+
+    def _drill_down(
+        self,
+        selected: list[RetrievalHit],
+        selected_ids: set[str],
+        *,
+        spent: int,
+        limit: int,
+        token_budget: int,
+        policy: dict[str, Any],
+    ) -> int:
+        parents = [hit for hit in selected if hit.level <= 1]
+        episode_hits: list[RetrievalHit] = []
+        for parent in parents:
+            for neighbor in self.store.neighbors(parent.node["id"]):
+                if neighbor["id"] in selected_ids or neighbor.get("kind") != "episodic":
+                    continue
+                edge = neighbor["edge"]
+                score = parent.score * float(edge["weight"]) * 0.42
+                episode_hits.append(
+                    self._hit(
+                        neighbor,
+                        score,
+                        [
+                            f"drilldown:{parent.node['id']}",
+                            f"edge:{edge['relation']}:{float(edge['weight']):.2f}",
+                            *policy["triggers"],
+                        ],
+                        drill_policy=policy,
+                        parent_id=parent.node["id"],
+                    )
+                )
+        episode_hits.sort(
+            key=lambda hit: (
+                hit.node.get("occurred_at") or "",
+                hit.score,
+                hit.node.get("priority", 0),
+            ),
+            reverse=True,
+        )
+        for hit in episode_hits[: policy["max_extra_nodes"]]:
+            if len(selected) >= limit:
+                break
+            node_tokens = int(hit.node.get("token_estimate", 0))
+            if selected and spent + node_tokens > token_budget:
+                continue
+            selected.append(hit)
+            selected_ids.add(hit.node["id"])
+            spent += node_tokens
+        return spent
+
+
+def memory_resolution(node: dict[str, Any]) -> tuple[int, str]:
+    kind = str(node.get("kind", "semantic"))
+    if kind == "episodic":
+        return 2, "episode"
+    if kind in {"identity", "relationship", "axis", "boundary", "project", "procedural", "semantic"}:
+        return 1, "checkpoint"
+    return 1, kind or "checkpoint"
+
+
+def drill_down_policy(query: str) -> dict[str, Any]:
+    norm = normalize_text(query)
+    trigger_groups = {
+        "evidence": {
+            "evidence",
+            "proof",
+            "prove",
+            "source",
+            "quote",
+            "cite",
+            "citation",
+            "provenance",
+            "verify",
+            "audit",
+            "bằng chứng",
+            "nguồn",
+            "trích",
+            "kiểm chứng",
+        },
+        "timeline": {
+            "timeline",
+            "chronology",
+            "when",
+            "date",
+            "history",
+            "episode",
+            "lịch sử",
+            "khi nào",
+            "ngày",
+            "mốc",
+        },
+        "conflict": {
+            "conflict",
+            "contradiction",
+            "contradicts",
+            "mâu thuẫn",
+            "không khớp",
+            "xung đột",
+        },
+        "drill": {
+            "drill",
+            "drill-down",
+            "recursive",
+            "coarse-to-fine",
+            "hierarchical",
+            "progressive disclosure",
+            "lazy loading",
+            "cuộn",
+            "phân tầng",
+            "chi tiết",
+        },
+    }
+    triggers: list[str] = []
+    for group, phrases in trigger_groups.items():
+        if any(phrase in norm for phrase in phrases):
+            triggers.append(group)
+    return {
+        "enabled": bool(triggers),
+        "triggers": triggers,
+        "include_source_pointer": bool({"evidence", "timeline", "conflict", "drill"} & set(triggers)),
+        "max_extra_nodes": 4,
+    }
