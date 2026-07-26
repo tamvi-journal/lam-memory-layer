@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Lam Memory Layer</title>
+  <link rel="stylesheet" href="/style.css?v=3" />
+  <link rel="stylesheet" href="/candidates.css?v=2" />
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand"><span class="sig">LML</span><div><strong>Lam Memory Layer</strong><small>cue-driven continuity vault</small></div></div>
+    <form id="searchForm"><input id="search" autocomplete="off" placeholder="Enter a cue: active project, decision history, owner preference..." /><button>Search</button></form>
+    <div id="stats" class="stats"></div>
+  </header>
+
+  <main class="layout">
+    <aside class="sidebar panel">
+      <div class="panel-title">Vault</div>
+      <div id="kinds" class="kind-list"></div>
+      <div class="legend">
+        <span><i class="dot identity"></i> identity</span>
+        <span><i class="dot relationship"></i> relationship</span>
+        <span><i class="dot axis"></i> axis</span>
+        <span><i class="dot project"></i> project</span>
+      </div>
+    </aside>
+
+    <section class="workspace">
+      <div class="graph panel">
+        <div class="panel-title graph-title">
+          <span>Memory Graph</span>
+          <div class="view-tabs">
+            <button type="button" class="tab active" data-view="graph">Graph</button>
+            <button type="button" class="tab" data-view="timeline">Timeline</button>
+            <button type="button" class="tab" data-view="packet">Packet</button>
+            <button type="button" class="tab" data-view="candidates">Candidates</button>
+          </div>
+          <div class="graph-actions">
+            <button type="button" id="focusBtn">Focus</button>
+            <button type="button" id="freezeBtn">Freeze</button>
+            <button type="button" id="resetBtn">Reset</button>
+          </div>
+          <span id="queryLabel" class="muted">all active nodes</span>
+        </div>
+        <svg id="graph" aria-label="memory graph"></svg>
+        <div id="timelineView" class="view-pane" hidden></div>
+        <div id="packetView" class="view-pane packet" hidden></div>
+        <div id="candidatesView" class="view-pane candidates-view" hidden></div>
+      </div>
+      <div class="cards panel">
+        <div class="panel-title">Activated cluster</div>
+        <div id="memoryCards"></div>
+      </div>
+    </section>
+
+    <aside class="rightbar">
+      <section class="inspector panel">
+        <div class="panel-title">Inspector</div>
+        <div id="inspector" class="empty">Chọn một node để xem provenance, cue và nội dung.</div>
+      </section>
+      <section class="timeline panel">
+        <div class="panel-title">Timeline</div>
+        <div id="timeline"></div>
+      </section>
+    </aside>
+  </main>
+  <script src="/app.js?v=6"></script>
+</body>
+</html>

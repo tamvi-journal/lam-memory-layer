@@ -1,0 +1,84 @@
+.candidates-view {
+  display: grid;
+  align-content: start;
+  gap: 18px;
+}
+
+.candidate-section {
+  display: grid;
+  gap: 10px;
+}
+
+.candidate-section h2 {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin: 0;
+  color: #ddd9e4;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.candidate-section h2 span {
+  color: var(--muted);
+  font-size: 11px;
+}
+
+.candidate-card {
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-left: 3px solid var(--warm);
+  border-radius: 8px;
+  background: var(--panel2);
+}
+
+.candidate-card.held {
+  border-left-color: #787481;
+  opacity: 0.88;
+}
+
+.candidate-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.candidate-card p {
+  margin: 7px 0;
+  color: #c4c0cc;
+  font-size: 12px;
+}
+
+.sensitivity {
+  padding: 2px 7px;
+  border: 1px solid #5d5868;
+  border-radius: 10px;
+  color: var(--muted);
+  font-size: 10px;
+}
+
+.sensitivity.relational {
+  border-color: #8c653c;
+  color: #f3bd80;
+}
+
+.sensitivity.identity {
+  border-color: #7461ad;
+  color: #cabafa;
+}
+
+.candidate-actions {
+  display: flex;
+  gap: 7px;
+  margin-top: 10px;
+}
+
+.candidate-actions button {
+  min-height: 28px;
+}
+
+.candidate-actions .reject {
+  border-color: #71494d;
+  background: #4f3034;
+}
