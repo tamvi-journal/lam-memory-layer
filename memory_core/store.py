@@ -92,6 +92,26 @@ class MemoryStore:
             ).fetchall()
         return [dict(row) for row in rows]
 
+    def evidence_for_revision(
+        self, revision_id: str
+    ) -> list[dict[str, Any]]:
+        """Return provenance linked to one immutable revision.
+
+        Retrieval adapters can expose evidence handles without reaching into the
+        store's private SQL helpers or treating evidence as authority.
+        """
+        self.init()
+        with self.connect() as conn:
+            rows = conn.execute(
+                "SELECT e.*,l.stance,l.weight,l.reason AS link_reason "
+                "FROM memory_revision_evidence_v2 l "
+                "JOIN memory_evidence_v2 e ON e.evidence_id=l.evidence_id "
+                "WHERE l.revision_id=? "
+                "ORDER BY e.captured_at,e.evidence_id,l.stance",
+                (revision_id,),
+            ).fetchall()
+        return [dict(row) for row in rows]
+
     def create_current(
         self,
         *,

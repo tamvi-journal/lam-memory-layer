@@ -79,6 +79,10 @@ def test_revision_history_is_append_only_and_idempotent(tmp_path):
         "Use evidence.",
         "Use evidence and preserve history.",
     ]
+    current_revision_id = store.current_view("update-law")[0]["revision_id"]
+    linked = store.evidence_for_revision(current_revision_id)
+    assert [item["source_ref"] for item in linked] == ["test:revised"]
+    assert linked[0]["stance"] == "supports"
 
 
 def test_retrieval_changes_accessibility_not_semantic_hash(tmp_path):
