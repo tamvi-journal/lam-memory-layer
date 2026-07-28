@@ -31,9 +31,11 @@ Accessibility is telemetry, not meaning. Retrieval may increase accessibility
 without changing the semantic hash.
 
 Confidence is part of the semantic claim and therefore changes through a new
-revision. Salience and stability can be updated by a host maintenance adapter,
-provided that the adapter logs its operation and never changes protected
-meaning through a metadata path.
+revision. Salience, stability and accessibility can be updated through
+`MemoryStore.apply_maintenance()`. That path is transactional, idempotent,
+records a `maintenance` operation, verifies that the semantic hash did not
+change and rejects all other fields. Host applications still decide when a
+maintenance run is justified.
 
 ## Authority
 

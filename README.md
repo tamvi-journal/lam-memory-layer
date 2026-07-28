@@ -67,6 +67,12 @@ The package is deliberately split into a small set of mechanical layers:
 > Retrieval may update accessibility telemetry. It never silently changes
 > semantic content, authority or lifecycle state.
 
+Host-controlled dreaming or consolidation may call
+`MemoryStore.apply_maintenance()` to regulate salience, stability and
+accessibility. Each batch is transactional, idempotent and recorded in the
+operation ledger; the method rejects semantic fields and verifies that content
+hashes remain unchanged.
+
 ## Update law
 
 ```text

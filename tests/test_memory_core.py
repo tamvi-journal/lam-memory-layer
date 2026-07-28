@@ -3,6 +3,8 @@ from __future__ import annotations
 import re
 from pathlib import Path
 
+import pytest
+
 from memory_core import (
     CueDrivenRetriever,
     MemoryProfile,
@@ -124,6 +126,104 @@ def test_retrieval_changes_accessibility_not_semantic_hash(tmp_path):
     assert hits[0].revision["record_id"] == "project-choice"
     assert after["content_sha256"] == before["content_sha256"]
     assert after["accessibility"] > before["accessibility"]
+
+
+def test_maintenance_is_audited_idempotent_and_non_semantic(tmp_path):
+    store, intake = writer(tmp_path)
+    intake.submit(
+        operation_type="create",
+        record_id="dynamic-memory",
+        record_class="belief",
+        domain="semantic",
+        actor="agent",
+        reason="verified memory",
+        logic="The claim is supported by bounded evidence.",
+        truth_basis="The test fixture is the source.",
+        evidence=[evidence("maintenance")],
+        idempotency_key="maintenance:create",
+        changes={
+            "title": "Dynamic memory",
+            "summary": "Regulation can change without rewriting meaning.",
+        },
+    )
+    before = store.current_view("dynamic-memory")[0]
+    result = store.apply_maintenance(
+        run_id="maintenance-1",
+        adjustments=[
+            {
+                "record_id": "dynamic-memory",
+                "field": "salience",
+                "old_value": before["salience"],
+                "new_value": 0.84,
+            },
+            {
+                "record_id": "dynamic-memory",
+                "field": "stability",
+                "old_value": before["stability"],
+                "new_value": 0.76,
+            },
+        ],
+        actor="host-maintenance",
+        surface="test",
+        reason="evidence-backed regulation",
+    )
+    duplicate = store.apply_maintenance(
+        run_id="maintenance-1",
+        adjustments=[],
+        actor="host-maintenance",
+        reason="idempotent retry",
+    )
+    after = store.current_view("dynamic-memory")[0]
+
+    assert result["operation_type"] == "maintenance"
+    assert result["decision"] == "materialized"
+    assert duplicate["operation_id"] == result["operation_id"]
+    assert result["details"]["semantic_content_changed"] is False
+    assert after["salience"] == 0.84
+    assert after["stability"] == 0.76
+    assert after["content_sha256"] == before["content_sha256"]
+    assert len(store.historical_view("dynamic-memory")) == 1
+
+
+def test_maintenance_invalid_batch_rolls_back(tmp_path):
+    store, intake = writer(tmp_path)
+    intake.submit(
+        operation_type="create",
+        record_id="dynamic-memory",
+        record_class="belief",
+        domain="semantic",
+        actor="agent",
+        reason="verified memory",
+        logic="The claim is supported by bounded evidence.",
+        truth_basis="The test fixture is the source.",
+        evidence=[evidence("maintenance-rollback")],
+        idempotency_key="maintenance:create",
+        changes={"title": "Dynamic memory"},
+    )
+    before = store.current_view("dynamic-memory")[0]
+
+    with pytest.raises(ValueError, match="unsupported maintenance field"):
+        store.apply_maintenance(
+            run_id="maintenance-invalid",
+            adjustments=[
+                {
+                    "record_id": "dynamic-memory",
+                    "field": "salience",
+                    "new_value": 0.91,
+                },
+                {
+                    "record_id": "dynamic-memory",
+                    "field": "summary",
+                    "new_value": 1.0,
+                },
+            ],
+            actor="host-maintenance",
+            reason="invalid mixed batch",
+        )
+
+    after = store.current_view("dynamic-memory")[0]
+    assert after["salience"] == before["salience"]
+    assert after["content_sha256"] == before["content_sha256"]
 
 
 def test_history_is_loaded_only_by_history_cue(tmp_path):

@@ -462,6 +462,113 @@ class MemoryStore:
                 (revision_id,),
             )
 
+    def apply_maintenance(
+        self,
+        *,
+        run_id: str,
+        adjustments: list[dict[str, Any]],
+        actor: str,
+        reason: str,
+        surface: str = "",
+        idempotency_key: str | None = None,
+    ) -> dict[str, Any]:
+        """Apply audited non-semantic regulation to current revisions.
+
+        Host maintenance adapters may adjust salience, stability, or
+        accessibility. Semantic content, confidence, authority, and lifecycle
+        state are outside this path. The batch is transactional and idempotent.
+        """
+
+        if not run_id.strip():
+            raise ValueError("maintenance run_id is required")
+        if not reason.strip():
+            raise ValueError("maintenance reason is required")
+        allowed_fields = {"salience", "stability", "accessibility"}
+        operation_key = idempotency_key or f"maintenance:{run_id}"
+        self.init()
+        with self.connect() as conn:
+            prior = self._operation_by_key(conn, operation_key)
+            if prior:
+                return self._operation_result(conn, prior)
+
+            applied: list[dict[str, Any]] = []
+            semantic_hashes: dict[str, str] = {}
+            for adjustment in adjustments:
+                record_id = str(adjustment.get("record_id", "")).strip()
+                field = str(adjustment.get("field", "")).strip()
+                if not record_id:
+                    raise ValueError("maintenance record_id is required")
+                if field not in allowed_fields:
+                    raise ValueError(
+                        f"unsupported maintenance field: {field or '<empty>'}"
+                    )
+                current = conn.execute(
+                    "SELECT * FROM memory_current_v2 WHERE record_id=?",
+                    (record_id,),
+                ).fetchone()
+                if not current:
+                    raise ValueError(
+                        f"maintenance current record not found: {record_id}"
+                    )
+                old_value = float(current[field])
+                if adjustment.get("old_value") is not None:
+                    expected = float(adjustment["old_value"])
+                    if abs(expected - old_value) > 1e-6:
+                        raise ValueError(
+                            f"maintenance old_value mismatch for {record_id}.{field}"
+                        )
+                new_value = clamp(float(adjustment["new_value"]))
+                semantic_hashes[current["revision_id"]] = current["content_sha256"]
+                if abs(new_value - old_value) <= 1e-9:
+                    continue
+                conn.execute(
+                    f"UPDATE memory_revisions_v2 SET {field}=? WHERE revision_id=?",
+                    (new_value, current["revision_id"]),
+                )
+                applied.append(
+                    {
+                        "record_id": record_id,
+                        "revision_id": current["revision_id"],
+                        "field": field,
+                        "old_value": old_value,
+                        "new_value": new_value,
+                    }
+                )
+
+            for revision_id, expected_hash in semantic_hashes.items():
+                row = conn.execute(
+                    "SELECT content_sha256 FROM memory_revisions_v2 "
+                    "WHERE revision_id=?",
+                    (revision_id,),
+                ).fetchone()
+                if not row or row["content_sha256"] != expected_hash:
+                    raise RuntimeError(
+                        "maintenance changed semantic content hash"
+                    )
+
+            operation = self._insert_operation(
+                conn,
+                operation_type="maintenance",
+                actor=actor,
+                surface=surface,
+                record_id=(
+                    applied[0]["record_id"] if len(applied) == 1 else None
+                ),
+                revision_id=(
+                    applied[0]["revision_id"] if len(applied) == 1 else None
+                ),
+                evidence_ids=[],
+                decision="materialized" if applied else "no_op",
+                reason=reason,
+                details={
+                    "run_id": run_id,
+                    "adjustments": applied,
+                    "semantic_content_changed": False,
+                },
+                idempotency_key=operation_key,
+            )
+            return self._operation_result(conn, operation)
+
     @staticmethod
     def _revision_id(
         record_id: str, revision_number: int, idempotency_key: str
