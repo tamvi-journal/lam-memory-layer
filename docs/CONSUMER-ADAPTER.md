@@ -23,6 +23,7 @@ memory = MemoryRuntime(
     profile,
     surface="local",
 )
+memory.store.initialize()
 ```
 
 The consumer then supplies its own provenance-bearing seed proposals and sends
@@ -60,10 +61,10 @@ permissions and action.
 
 | Memory Core | Consumer adapter |
 |---|---|
-| revisions and history | identity and axis seeds |
+| immutable revisions and append-only lifecycle | identity and axis seeds |
 | evidence and operation ledger | approved evidence sources |
 | cue and relation retrieval | aliases and bootstrap anchors |
-| bounded packet rendering | final reasoning authority |
+| complete hard-budget packet rendering | final reasoning authority |
 | audited maintenance primitive | dream/maintenance policy |
 | generic validation | permissions and protected authorization |
 
@@ -71,10 +72,12 @@ permissions and action.
 
 1. Define a thin update law, not a personality script.
 2. Attach independent sources and an explicit falsifier to axis seeds.
-3. Bootstrap idempotently into a private runtime database.
+3. Explicitly initialize, then bootstrap idempotently into a private runtime
+   database. Use `migrate_to()` when importing a v2 store.
 4. Retrieve into an explicitly non-authoritative candidate-context boundary.
 5. Keep the host's verification, action gate and owner permissions unchanged.
-6. Run `doctor()` plus consumer-specific cue contracts.
+6. Choose read-only or telemetry-tracked retrieval explicitly, then run
+   `doctor()` plus consumer-specific cue contracts.
 7. Add maintenance only after semantic revision behavior is verified.
 8. Keep an unimplemented child profile unimplemented until its own build gate
    and source audit pass; sharing Memory Core is not permission to clone another

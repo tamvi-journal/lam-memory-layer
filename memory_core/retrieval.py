@@ -30,6 +30,7 @@ class CueDrivenRetriever:
         limit: int = 10,
         token_budget: int = 1800,
         include_history: bool | None = None,
+        track_access: bool = True,
     ) -> list[MemoryHit]:
         normalized = normalize_text(query)
         query_tokens = set(tokens(query))
@@ -37,27 +38,15 @@ class CueDrivenRetriever:
             item["record_id"]: item
             for item in self.store.current_view()
             if item["authority_status"] != "non_authoritative"
+            and item["record_class"] != "unclassified"
             and item["scope"] in {"global", scope}
         }
         scores = {record_id: 0.0 for record_id in revisions}
         reasons = {record_id: [] for record_id in revisions}
         direct: set[str] = set()
 
-        with self.store.connect() as conn:
-            cues = [
-                dict(row)
-                for row in conn.execute(
-                    "SELECT * FROM memory_cues_v2 WHERE profile=? "
-                    "AND scope IN ('global',?) ORDER BY weight DESC",
-                    (self.profile.name, scope),
-                )
-            ]
-            relations = [
-                dict(row)
-                for row in conn.execute(
-                    "SELECT * FROM memory_relations_v2 WHERE status='active'"
-                )
-            ]
+        cues = self.store.cue_rows(self.profile.name, scope)
+        relations = self.store.active_relation_rows()
         cues.extend(
             {
                 "cue": cue,
@@ -179,12 +168,13 @@ class CueDrivenRetriever:
                 )
             selected.append(hit)
             spent += estimate
-            self.store.record_access(
-                cue=query,
-                record_id=hit.revision["record_id"],
-                revision_id=hit.revision["revision_id"],
-                retrieval_reason=",".join(hit.reasons[:5]),
-                rank=len(selected),
-                surface=surface,
-            )
+            if track_access:
+                self.store.record_access(
+                    cue=query,
+                    record_id=hit.revision["record_id"],
+                    revision_id=hit.revision["revision_id"],
+                    retrieval_reason=",".join(hit.reasons[:5]),
+                    rank=len(selected),
+                    surface=surface,
+                )
         return selected

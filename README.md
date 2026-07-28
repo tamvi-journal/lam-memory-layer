@@ -57,15 +57,16 @@ The package is deliberately split into a small set of mechanical layers:
 
 | Layer | Responsibility |
 |---|---|
-| `MemoryStore` | Records, immutable revisions, evidence, operations, cues, relations and access telemetry |
+| `MemoryStore` | Immutable semantic revisions, append-only lifecycle, canonical evidence identity, and separate cognition telemetry |
 | `ValidatedIntake` | Materialize, hold or reject evidence-bearing semantic proposals |
 | `CueDrivenRetriever` | Activate current revisions from cues, lexical overlap, bootstrap anchors and graph relations |
 | `PacketRenderer` | Compress selected current/history views into a bounded context packet |
 | `MemoryProfile` | Supply consumer-owned anchors, aliases, sections and instructions |
 
 > [!IMPORTANT]
-> Retrieval may update accessibility telemetry. It never silently changes
-> semantic content, authority or lifecycle state.
+> Retrieval is explicit about side effects. `track_access=False` is a
+> read-only path; tracked retrieval may update telemetry, never semantic
+> content, evidence or lifecycle state.
 
 Host-controlled dreaming or consolidation may call
 `MemoryStore.apply_maintenance()` to regulate salience, stability and
@@ -93,8 +94,27 @@ The kernel follows four rules:
 
 1. Current evidence may revise the current model.
 2. Revision creates history; it does not overwrite history.
-3. Retrieval may change accessibility, not semantic content.
-4. Protected weakening requires authority supplied by the host application.
+3. Lifecycle transitions append events; they never rewrite revision rows.
+4. Retrieval may change telemetry, not semantic content or evidence.
+5. Protected weakening requires authority supplied by the host application.
+
+## Storage contract in `0.2`
+
+- Semantic revision and evidence rows are physically immutable.
+- Lifecycle truth is an append-only event stream.
+- Salience, stability, accessibility and access counts live in a separate
+  mutable telemetry table.
+- Evidence identity is deterministic and versioned with normalized
+  `source_family` and `independence_group`.
+- Ordinary reads perform no DDL and no hidden writes.
+- Initialization and migration are explicit and fail closed through SQLite
+  `application_id` plus `user_version`.
+- `MemoryStore.migrate_to()` copies first and migrates only the copy.
+- `PacketRenderer` owns the complete packet budget, including framing and
+  execution instructions, using `deterministic-utf8-quarter/v1`.
+
+See [the 0.2 memory law](docs/MEMORY-LAW-0.2.md) for the invariant and migration
+boundary.
 
 ## Install
 
@@ -110,6 +130,7 @@ python3 -m pip install -e .
 from memory_core import MemoryStore, ValidatedIntake
 
 store = MemoryStore("memory.sqlite3")
+store.initialize()
 writer = ValidatedIntake(store, surface="local")
 
 result = writer.submit(

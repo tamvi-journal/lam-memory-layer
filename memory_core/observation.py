@@ -8,26 +8,32 @@ from .store import MemoryStore
 
 
 def validate_store(store: MemoryStore) -> dict[str, Any]:
-    store.init()
-    with store.connect() as conn:
+    store.initialize()
+    with store.connect(readonly=True) as conn:
         integrity = conn.execute("PRAGMA integrity_check").fetchone()[0]
         foreign_keys = [
             dict(row) for row in conn.execute("PRAGMA foreign_key_check")
         ]
         duplicate_current = conn.execute(
-            "SELECT record_id,COUNT(*) AS count FROM memory_revisions_v2 "
-            "WHERE revision_status='current' GROUP BY record_id HAVING count>1"
+            "SELECT record_id,COUNT(*) AS count FROM memory_current_v3 "
+            "GROUP BY record_id HAVING count>1"
         ).fetchall()
         orphan_current = conn.execute(
-            "SELECT v.revision_id FROM memory_revisions_v2 v "
-            "LEFT JOIN memory_records_v2 r ON r.record_id=v.record_id "
-            "WHERE v.revision_status='current' AND r.record_id IS NULL"
+            "SELECT v.revision_id FROM memory_current_v3 v "
+            "LEFT JOIN memory_records_v3 r ON r.record_id=v.record_id "
+            "WHERE r.record_id IS NULL"
         ).fetchall()
     checks = {
         "integrity_ok": integrity == "ok",
         "foreign_keys_ok": not foreign_keys,
         "one_current_revision_per_record": not duplicate_current,
         "no_orphan_current_revision": not orphan_current,
+        "schema_application_id": (
+            store.schema_info()["application_id"] != 0
+        ),
+        "schema_version_current": (
+            store.schema_info()["user_version"] == 3
+        ),
     }
     return {
         "schema": "memory-core-doctor/v1",

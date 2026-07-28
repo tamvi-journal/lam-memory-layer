@@ -49,6 +49,7 @@ class MemoryRuntime:
         limit: int = 8,
         token_budget: int = 1400,
         include_history: bool | None = None,
+        track_access: bool = True,
     ):
         return self.retriever.retrieve(
             query,
@@ -57,6 +58,25 @@ class MemoryRuntime:
             limit=limit,
             token_budget=token_budget,
             include_history=include_history,
+            track_access=track_access,
+        )
+
+    def retrieve_readonly(
+        self,
+        query: str,
+        *,
+        scope: str = "global",
+        limit: int = 8,
+        token_budget: int = 1400,
+        include_history: bool | None = None,
+    ):
+        return self.retrieve(
+            query,
+            scope=scope,
+            limit=limit,
+            token_budget=token_budget,
+            include_history=include_history,
+            track_access=False,
         )
 
     def render_context(
@@ -82,6 +102,7 @@ class MemoryRuntime:
             scope=scope,
             surface=self.surface,
             compact=compact,
+            token_budget=token_budget,
         )
 
     def apply_maintenance(self, **maintenance: Any) -> dict[str, Any]:

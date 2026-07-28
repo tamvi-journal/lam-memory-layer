@@ -5,7 +5,13 @@ import json
 from dataclasses import dataclass
 from typing import Any
 
-from .store import MemoryStore, hash_payload, semantic_hash, utc_now
+from .store import (
+    MemoryStore,
+    canonical_evidence_identity,
+    hash_payload,
+    semantic_hash,
+    utc_now,
+)
 
 
 @dataclass(frozen=True)
@@ -279,7 +285,7 @@ class ValidatedIntake:
             return "held", f"evidence confidence is below {minimum:.2f}"
         if record_class == "axis":
             sources = {
-                str(item.get("source_ref", "")).strip()
+                canonical_evidence_identity(item)["independence_group"]
                 for item in payload["evidence"]
             }
             if not str(payload["falsifier"]).strip():
@@ -341,7 +347,7 @@ class ValidatedIntake:
     ) -> None:
         with self.store.connect() as conn:
             conn.execute(
-                "INSERT INTO memory_intake_v2("
+                "INSERT INTO memory_intake_v3("
                 "intake_id,operation_type,target_record_id,proposal_sha256,"
                 "evidence_ids_json,status,decision_reason,operation_id,actor,"
                 "surface,idempotency_key,created_at,decided_at"
@@ -370,7 +376,7 @@ class ValidatedIntake:
     ) -> None:
         with self.store.connect() as conn:
             conn.execute(
-                "UPDATE memory_intake_v2 SET status=?,decision_reason=?,"
+                "UPDATE memory_intake_v3 SET status=?,decision_reason=?,"
                 "target_record_id=?,operation_id=?,decided_at=? WHERE intake_id=?",
                 (
                     status,
@@ -385,7 +391,7 @@ class ValidatedIntake:
     def _intake_by_key(self, idempotency_key: str) -> dict[str, Any] | None:
         with self.store.connect() as conn:
             row = conn.execute(
-                "SELECT * FROM memory_intake_v2 WHERE idempotency_key=?",
+                "SELECT * FROM memory_intake_v3 WHERE idempotency_key=?",
                 (idempotency_key,),
             ).fetchone()
         if not row:

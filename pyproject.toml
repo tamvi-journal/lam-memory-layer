@@ -4,8 +4,8 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "agent-memory-core"
-version = "0.1.0"
-description = "Profile-driven cue memory with immutable revisions and validated intake"
+version = "0.2.0"
+description = "Cue memory with immutable semantics, append-only lifecycle, and dynamic cognition telemetry"
 requires-python = ">=3.10"
 license = "Apache-2.0"
 license-files = ["LICENSE", "NOTICE"]
