@@ -7,6 +7,17 @@ name = "agent-memory-core"
 version = "0.1.0"
 description = "Profile-driven cue memory with immutable revisions and validated intake"
 requires-python = ">=3.10"
+keywords = ["agents", "memory", "provenance", "retrieval", "revisions"]
+classifiers = [
+  "Development Status :: 3 - Alpha",
+  "Intended Audience :: Developers",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3 :: Only",
+]
+
+[project.urls]
+Repository = "https://github.com/tamvi-journal/agent-memory-core"
+Documentation = "https://github.com/tamvi-journal/agent-memory-core/tree/main/docs"
 
 [tool.setuptools.packages.find]
 include = ["memory_core*"]

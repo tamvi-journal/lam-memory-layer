@@ -1,6 +1,6 @@
 # Agent Memory Core
 
-A small, profile-driven memory engine for agents that need:
+An experimental, profile-driven memory engine for agents that need:
 
 - current and historical views;
 - immutable semantic revisions;
@@ -14,6 +14,27 @@ A small, profile-driven memory engine for agents that need:
 The package contains no agent identity, relationship history, private memory,
 provider prompt, or product-specific transport. Those belong in profiles and
 adapters owned by the consuming project.
+
+## Why this exists
+
+Agent memory should be able to evolve without quietly rewriting its own past.
+This library separates four concerns that are often collapsed together:
+
+- a stable record identity;
+- append-only semantic revisions;
+- immutable evidence and provenance;
+- dynamic retrieval telemetry.
+
+The result is a reusable mechanism, not a prebuilt identity or autonomous
+agent.
+
+## Install from source
+
+```bash
+git clone https://github.com/tamvi-journal/agent-memory-core.git
+cd agent-memory-core
+python3 -m pip install -e .
+```
 
 ## Update law
 
@@ -56,6 +77,13 @@ result = writer.submit(
 
 Use `MemoryProfile`, `CueDrivenRetriever`, and `PacketRenderer` to supply the
 consumer-specific bootstrap anchors, aliases, sections, and instructions.
+
+## Verify
+
+```bash
+python3 -W error::ResourceWarning -m pytest -q
+python3 -m pip wheel . --no-deps
+```
 
 ## Boundaries
 
