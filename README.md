@@ -1,49 +1,102 @@
-# Agent Memory Core
+<div align="center">
+  <img src="assets/mark.svg" width="92" alt="Agent Memory Core mark" />
 
-An experimental, profile-driven memory engine for agents that need:
+  # Agent Memory Core
 
-- current and historical views;
-- immutable semantic revisions;
-- provenance-bearing evidence;
-- cue-driven retrieval with bounded packets;
-- dynamic accessibility without silent meaning changes;
-- validated self-managed intake;
-- slow, evidence-heavy axis evolution;
-- fail-closed protected boundaries.
+  **Memory evolves. History remains.**
 
-The package contains no agent identity, relationship history, private memory,
-provider prompt, or product-specific transport. Those belong in profiles and
-adapters owned by the consuming project.
+  A profile-driven semantic memory kernel for agents that need dynamic recall<br>
+  without silent self-rewrite.
 
-## Why this exists
+  [![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-69d9f0?style=for-the-badge&logo=python&logoColor=white)](#install)
+  [![Status: Alpha](https://img.shields.io/badge/status-alpha-a77cff?style=for-the-badge)](#project-status)
+  [![SQLite](https://img.shields.io/badge/storage-SQLite-62d8d8?style=for-the-badge&logo=sqlite&logoColor=white)](#architecture)
+  [![Apache 2.0](https://img.shields.io/badge/license-Apache--2.0-f0a96a?style=for-the-badge)](LICENSE)
+</div>
 
-Agent memory should be able to evolve without quietly rewriting its own past.
-This library separates four concerns that are often collapsed together:
+<img src="assets/memory-constellation-hero.png" width="100%" alt="A crystalline memory core surrounded by an evolving graph of luminous memory nodes" />
 
-- a stable record identity;
-- append-only semantic revisions;
-- immutable evidence and provenance;
-- dynamic retrieval telemetry.
+---
 
-The result is a reusable mechanism, not a prebuilt identity or autonomous
-agent.
+## The idea
 
-## Install from source
+Most agent-memory systems quietly collapse **what happened**, **what is
+currently believed**, **why it is believed**, and **how often it was recalled**
+into one mutable blob.
+
+Agent Memory Core keeps them separate.
+
+<table>
+  <tr>
+    <td width="25%" valign="top">
+      <h3>◈ Revisions</h3>
+      Semantic updates create new immutable revisions. Earlier claims remain inspectable.
+    </td>
+    <td width="25%" valign="top">
+      <h3>⌁ Provenance</h3>
+      Evidence, confidence, logic and truth basis travel with every proposed change.
+    </td>
+    <td width="25%" valign="top">
+      <h3>✦ Retrieval</h3>
+      Explicit cues, lexical overlap, scope and graph relations produce bounded packets.
+    </td>
+    <td width="25%" valign="top">
+      <h3>⬡ Boundaries</h3>
+      Profiles own identity and authority. The generic kernel never owns the agent.
+    </td>
+  </tr>
+</table>
+
+## Architecture
+
+<div align="center">
+  <img src="assets/architecture.svg" width="100%" alt="Agent Memory Core semantic memory architecture" />
+</div>
+
+The package is deliberately split into a small set of mechanical layers:
+
+| Layer | Responsibility |
+|---|---|
+| `MemoryStore` | Records, immutable revisions, evidence, operations, cues, relations and access telemetry |
+| `ValidatedIntake` | Materialize, hold or reject evidence-bearing semantic proposals |
+| `CueDrivenRetriever` | Activate current revisions from cues, lexical overlap, bootstrap anchors and graph relations |
+| `PacketRenderer` | Compress selected current/history views into a bounded context packet |
+| `MemoryProfile` | Supply consumer-owned anchors, aliases, sections and instructions |
+
+> [!IMPORTANT]
+> Retrieval may update accessibility telemetry. It never silently changes
+> semantic content, authority or lifecycle state.
+
+## Update law
+
+```text
+current evidence
+      │
+      ▼
+validated semantic operation
+      │
+      ├── weak / conflicting evidence ──▶ held, fail closed
+      │
+      └── accepted evidence ────────────▶ new immutable revision
+                                             │
+                                             ├── current view
+                                             └── inspectable history
+```
+
+The kernel follows four rules:
+
+1. Current evidence may revise the current model.
+2. Revision creates history; it does not overwrite history.
+3. Retrieval may change accessibility, not semantic content.
+4. Protected weakening requires authority supplied by the host application.
+
+## Install
 
 ```bash
 git clone https://github.com/tamvi-journal/agent-memory-core.git
 cd agent-memory-core
 python3 -m pip install -e .
 ```
-
-## Update law
-
-The core follows four rules:
-
-1. Current evidence may revise the current model.
-2. Revision creates history; it does not overwrite history.
-3. Retrieval may change accessibility, not semantic content.
-4. Protected weakening requires authority supplied by the host application.
 
 ## Minimal use
 
@@ -76,7 +129,24 @@ result = writer.submit(
 ```
 
 Use `MemoryProfile`, `CueDrivenRetriever`, and `PacketRenderer` to supply the
-consumer-specific bootstrap anchors, aliases, sections, and instructions.
+consumer-specific bootstrap anchors, aliases, sections and instructions.
+
+## What belongs outside the core
+
+This repository deliberately contains **no agent identity, relationship
+history, private memory, provider prompt or product-specific transport**.
+
+| The core owns | The consuming application owns |
+|---|---|
+| Revision mechanics | Identity and personality |
+| Evidence and provenance | Relationship history |
+| Cue and graph retrieval | Private seeds and source data |
+| Generic policy hooks | Product routing and lifecycle integration |
+| Access telemetry | Final authority and permission boundaries |
+
+It does not implement transcript dumping, hidden-state access, automatic
+authority over protected constraints, cross-product transport or a universal
+ontology.
 
 ## Verify
 
@@ -85,15 +155,22 @@ python3 -W error::ResourceWarning -m pytest -q
 python3 -m pip wheel . --no-deps
 ```
 
-## Boundaries
+The test suite includes an explicit boundary check that prevents consumer
+identity or private seeds from entering the reusable kernel.
 
-This repository deliberately does not implement:
+## Project status
 
-- transcript dumping;
-- hidden-state access;
-- identity or personality templates;
-- automatic authority over protected constraints;
-- cross-product transport;
-- a universal ontology.
+Agent Memory Core is an alpha research-engineering extraction. The storage,
+revision, evidence and retrieval boundaries are tested; the public API may
+still evolve before `1.0`.
 
-Those are application decisions, not generic memory mechanics.
+## License
+
+Licensed under the [Apache License 2.0](LICENSE), including its explicit patent
+grant.
+
+---
+
+<div align="center">
+  <sub>Built for agents that should be able to change their minds without changing their past.</sub>
+</div>
