@@ -6,6 +6,8 @@ from pathlib import Path
 import pytest
 
 from memory_core import (
+    ConsumerBundle,
+    ConsumerMemory,
     CueDrivenRetriever,
     MemoryProfile,
     MemoryRuntime,
@@ -31,6 +33,31 @@ def evidence(label: str, confidence: float = 0.9) -> dict:
 def writer(tmp_path):
     store = MemoryStore(tmp_path / "memory.sqlite3")
     return store, ValidatedIntake(store, surface="test")
+
+
+def axis_seed(
+    record_id: str = "example-axis",
+    evidence_items: list[dict] | None = None,
+    falsifier: str = "Verified counterexamples outperform this update law.",
+) -> dict:
+    return {
+        "operation_type": "create",
+        "record_id": record_id,
+        "record_class": "axis",
+        "domain": "logic",
+        "actor": "consumer",
+        "reason": "Seed a thin tested update law.",
+        "logic": "The independent sources require the same update behavior.",
+        "truth_basis": "Two bounded sources are attached.",
+        "falsifier": falsifier,
+        "evidence": evidence_items
+        or [evidence("axis-source-a"), evidence("axis-source-b")],
+        "idempotency_key": f"{record_id}:v1",
+        "changes": {
+            "title": "Example update law",
+            "summary": "Revise with evidence and preserve history.",
+        },
+    }
 
 
 def test_revision_history_is_append_only_and_idempotent(tmp_path):
@@ -459,6 +486,61 @@ def test_doctor_and_cue_contract(tmp_path):
 
     assert validate_store(store)["passed"]
     assert evaluation["passed"]
+
+
+def test_consumer_bundle_bootstraps_idempotently_and_returns_candidates(
+    tmp_path,
+):
+    profile = MemoryProfile(
+        name="example-consumer",
+        packet_title="EXAMPLE MEMORY",
+        bootstrap_record_ids=("example-axis",),
+        cue_aliases=(("reasoning", "example-axis", 1.8),),
+    )
+    bundle = ConsumerBundle(profile=profile, seeds=(axis_seed(),))
+    consumer = ConsumerMemory(
+        tmp_path / "consumer.sqlite3",
+        bundle,
+        surface="consumer-test",
+    )
+
+    first = consumer.bootstrap()
+    second = consumer.bootstrap()
+    context = consumer.candidate_context("reasoning")
+    doctor = consumer.doctor()
+
+    assert first[0]["intake_id"] == second[0]["intake_id"]
+    assert context["memory_decides_truth"] is False
+    assert context["items"][0]["memory_id"] == "example-axis"
+    assert len(context["items"][0]["evidence"]) == 2
+    assert doctor["bundle"]["valid"] is True
+    assert doctor["store"]["passed"] is True
+
+
+@pytest.mark.parametrize(
+    ("seed", "message"),
+    [
+        (
+            axis_seed(evidence_items=[evidence("only-one")]),
+            "at least two distinct evidence sources",
+        ),
+        (
+            axis_seed(falsifier=""),
+            "missing an explicit falsifier",
+        ),
+    ],
+)
+def test_consumer_bundle_rejects_under_evidenced_axis(seed, message):
+    profile = MemoryProfile(
+        name="unsafe-consumer",
+        packet_title="UNSAFE",
+        bootstrap_record_ids=("example-axis",),
+    )
+    bundle = ConsumerBundle(profile=profile, seeds=(seed,))
+
+    assert bundle.validate()["valid"] is False
+    with pytest.raises(ValueError, match=message):
+        bundle.require_valid()
 
 
 def test_core_contains_no_consumer_identity_or_private_seed():

@@ -137,7 +137,11 @@ result = writer.submit(
 Use `MemoryProfile`, `CueDrivenRetriever`, and `PacketRenderer` to supply the
 consumer-specific bootstrap anchors, aliases, sections and instructions.
 `MemoryRuntime` provides a consumer-neutral façade over those components
-without owning seeds or final authority. See
+without owning seeds or final authority. `ConsumerBundle` validates that
+bootstrap records have seeds and that axis seeds carry an explicit falsifier
+plus at least two distinct evidence sources. `ConsumerMemory` then provides an
+idempotent bootstrap and a neutral candidate-context envelope that always
+declares `memory_decides_truth=false`. See
 [the consumer adapter contract](docs/CONSUMER-ADAPTER.md).
 
 ## What belongs outside the core
