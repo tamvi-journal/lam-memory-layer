@@ -8,6 +8,7 @@ import pytest
 from memory_core import (
     CueDrivenRetriever,
     MemoryProfile,
+    MemoryRuntime,
     MemoryStore,
     PacketRenderer,
     ValidatedIntake,
@@ -224,6 +225,55 @@ def test_maintenance_invalid_batch_rolls_back(tmp_path):
     after = store.current_view("dynamic-memory")[0]
     assert after["salience"] == before["salience"]
     assert after["content_sha256"] == before["content_sha256"]
+
+
+def test_consumer_neutral_runtime_wires_profile_without_owning_identity(tmp_path):
+    profile = MemoryProfile(
+        name="example-consumer",
+        packet_title="EXAMPLE MEMORY",
+        cue_aliases=(("verified choice", "project-choice", 1.8),),
+        section_order=("project",),
+        default_instructions=("Memory is candidate context.",),
+    )
+    runtime = MemoryRuntime(
+        tmp_path / "consumer.sqlite3",
+        profile,
+        surface="consumer-test",
+    )
+    created = runtime.submit(
+        operation_type="create",
+        record_id="project-choice",
+        record_class="belief",
+        domain="project",
+        actor="consumer",
+        reason="verified project choice",
+        logic="The implementation and verification result agree.",
+        truth_basis="A bounded test source is attached.",
+        evidence=[evidence("runtime")],
+        idempotency_key="runtime:create",
+        changes={
+            "title": "Project choice",
+            "summary": "Use the verified path.",
+        },
+    )
+    context = runtime.render_context("verified choice")
+    maintenance = runtime.apply_maintenance(
+        run_id="runtime-maintenance",
+        adjustments=[
+            {
+                "record_id": "project-choice",
+                "field": "salience",
+                "new_value": 0.8,
+            }
+        ],
+        actor="consumer",
+        reason="bounded host maintenance",
+    )
+
+    assert created["status"] == "materialized"
+    assert "project-choice" in context
+    assert maintenance["decision"] == "materialized"
+    assert runtime.doctor()["passed"] is True
 
 
 def test_history_is_loaded_only_by_history_cue(tmp_path):

@@ -5,6 +5,7 @@ from .observation import evaluate_cue_contract, validate_store
 from .packet import PacketRenderer
 from .profile import MemoryProfile
 from .retrieval import CueDrivenRetriever, MemoryHit
+from .runtime import MemoryRuntime
 from .store import MemoryStore
 
 __all__ = [
@@ -12,6 +13,7 @@ __all__ = [
     "GovernancePolicy",
     "MemoryHit",
     "MemoryProfile",
+    "MemoryRuntime",
     "MemoryStore",
     "PacketRenderer",
     "ValidatedIntake",

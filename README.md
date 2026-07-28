@@ -136,6 +136,9 @@ result = writer.submit(
 
 Use `MemoryProfile`, `CueDrivenRetriever`, and `PacketRenderer` to supply the
 consumer-specific bootstrap anchors, aliases, sections and instructions.
+`MemoryRuntime` provides a consumer-neutral façade over those components
+without owning seeds or final authority. See
+[the consumer adapter contract](docs/CONSUMER-ADAPTER.md).
 
 ## What belongs outside the core
 
