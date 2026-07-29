@@ -184,7 +184,20 @@ class MemoryStore:
 
         before = self.schema_info()
         if before["state"] == "ready":
-            return {**before, "changed": False}
+            schema = Path(__file__).with_name("schema.sql").read_text(
+                encoding="utf-8"
+            )
+            with self._raw_connect() as conn:
+                had_pipeline = self._table_exists(
+                    conn, "memory_episodes_v3"
+                )
+                conn.executescript(schema)
+                conn.execute(
+                    "INSERT INTO memory_meta_v3(key,value) "
+                    "VALUES('pipeline_contract','memory-dream-summary/v1') "
+                    "ON CONFLICT(key) DO UPDATE SET value=excluded.value"
+                )
+            return {**before, "changed": not had_pipeline}
         if before["state"] == "incompatible":
             raise SchemaVersionError(
                 "database application_id/user_version is newer or foreign"
@@ -217,6 +230,11 @@ class MemoryStore:
                 "INSERT INTO memory_meta_v3(key,value) VALUES('schema_version',?) "
                 "ON CONFLICT(key) DO UPDATE SET value=excluded.value",
                 (str(SCHEMA_VERSION),),
+            )
+            conn.execute(
+                "INSERT INTO memory_meta_v3(key,value) "
+                "VALUES('pipeline_contract','memory-dream-summary/v1') "
+                "ON CONFLICT(key) DO UPDATE SET value=excluded.value"
             )
             conn.execute(f"PRAGMA application_id={APPLICATION_ID}")
             conn.execute(f"PRAGMA user_version={SCHEMA_VERSION}")

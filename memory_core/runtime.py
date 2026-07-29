@@ -4,6 +4,8 @@ from pathlib import Path
 from typing import Any
 
 from .governance import GovernancePolicy, ValidatedIntake
+from .dream import GovernedDream
+from .episodes import EpisodeArchive
 from .observation import validate_store
 from .packet import PacketRenderer
 from .profile import MemoryProfile
@@ -37,6 +39,12 @@ class MemoryRuntime:
         )
         self.retriever = CueDrivenRetriever(self.store, profile)
         self.renderer = PacketRenderer(profile)
+        self.episodes = EpisodeArchive(self.store)
+        self.dream = GovernedDream(
+            self.store,
+            self.intake,
+            surface=surface,
+        )
 
     def submit(self, **proposal: Any) -> dict[str, Any]:
         return self.intake.submit(**proposal)

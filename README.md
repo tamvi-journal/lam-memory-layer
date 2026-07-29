@@ -62,6 +62,11 @@ The package is deliberately split into a small set of mechanical layers:
 | `CueDrivenRetriever` | Activate current revisions from cues, lexical overlap, bootstrap anchors and graph relations |
 | `PacketRenderer` | Compress selected current/history views into a bounded context packet |
 | `MemoryProfile` | Supply consumer-owned anchors, aliases, sections and instructions |
+| `EpisodeArchive` | Capture bounded immutable experiences without transcript dumping by default |
+| `GovernedDream` | Run idempotent consolidation whose semantic proposals still pass validated intake |
+| `SummaryProjector` | Regenerate deterministic, hard-budgeted summaries from the canonical database |
+| `HermesProjection` | Write one-way `MEMORY.md` / `USER.md` projections without treating files as truth |
+| `MemoryTenancy` | Isolate a consumer database and optional Hermes home under one tenant boundary |
 
 > [!IMPORTANT]
 > Retrieval is explicit about side effects. `track_access=False` is a
@@ -73,6 +78,13 @@ Host-controlled dreaming or consolidation may call
 accessibility. Each batch is transactional, idempotent and recorded in the
 operation ledger; the method rejects semantic fields and verifies that content
 hashes remain unchanged.
+
+The optional memory–dream–summary pipeline adds an immutable bounded episode
+archive, governed consolidation and deterministic file projection. It is
+additive to the `0.2` storage law: dream proposals cannot bypass
+`ValidatedIntake`, prior semantic payloads remain immutable, and projections
+are disposable views of SQLite rather than a second memory authority. See
+[the pipeline contract](docs/MEMORY-DREAM-SUMMARY.md).
 
 ## Update law
 
@@ -112,6 +124,12 @@ The kernel follows four rules:
 - `MemoryStore.migrate_to()` copies first and migrates only the copy.
 - `PacketRenderer` owns the complete packet budget, including framing and
   execution instructions, using `deterministic-utf8-quarter/v1`.
+- Raw episodes are immutable, provenance-bearing and reject transcript-shaped
+  payloads unless a host explicitly opts in.
+- Dream runs are idempotent and fail if any pre-existing semantic revision hash
+  changes.
+- Summary and Hermes projections use the same complete hard-budget estimator
+  and can be regenerated from the canonical database.
 
 See [the 0.2 memory law](docs/MEMORY-LAW-0.2.md) for the invariant and migration
 boundary.
@@ -178,9 +196,9 @@ history, private memory, provider prompt or product-specific transport**.
 | Generic policy hooks | Product routing and lifecycle integration |
 | Access telemetry | Final authority and permission boundaries |
 
-It does not implement transcript dumping, hidden-state access, automatic
-authority over protected constraints, cross-product transport or a universal
-ontology.
+It does not implement automatic transcript dumping, hidden-state access,
+automatic authority over protected constraints, cross-product transport or a
+universal ontology.
 
 ## Verify
 

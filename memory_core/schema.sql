@@ -216,6 +216,61 @@ CREATE TABLE IF NOT EXISTS memory_meta_v3 (
     value TEXT NOT NULL
 );
 
+CREATE TABLE IF NOT EXISTS memory_episodes_v3 (
+    episode_id TEXT PRIMARY KEY,
+    episode_type TEXT NOT NULL DEFAULT 'experience',
+    source_ref TEXT NOT NULL,
+    source_family TEXT NOT NULL,
+    source_sha256 TEXT NOT NULL,
+    observed_at TEXT NOT NULL,
+    actor TEXT NOT NULL,
+    surface TEXT NOT NULL DEFAULT '',
+    title TEXT NOT NULL,
+    summary TEXT NOT NULL,
+    content_excerpt TEXT NOT NULL DEFAULT '',
+    raw_payload_json TEXT NOT NULL DEFAULT '{}',
+    privacy_class TEXT NOT NULL DEFAULT 'private',
+    transcript_included INTEGER NOT NULL DEFAULT 0
+        CHECK(transcript_included IN (0, 1)),
+    capture_sha256 TEXT NOT NULL,
+    idempotency_key TEXT NOT NULL UNIQUE,
+    created_at TEXT NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_memory_core_v3_episode_time
+ON memory_episodes_v3(observed_at DESC, episode_id);
+
+CREATE TABLE IF NOT EXISTS memory_dream_runs_v3 (
+    dream_run_id TEXT PRIMARY KEY,
+    input_sha256 TEXT NOT NULL,
+    actor TEXT NOT NULL,
+    surface TEXT NOT NULL DEFAULT '',
+    reason TEXT NOT NULL,
+    proposal_count INTEGER NOT NULL DEFAULT 0 CHECK(proposal_count >= 0),
+    result_json TEXT NOT NULL DEFAULT '{}',
+    semantic_history_before_sha256 TEXT NOT NULL,
+    semantic_history_after_sha256 TEXT NOT NULL,
+    historical_payload_rewritten INTEGER NOT NULL DEFAULT 0
+        CHECK(historical_payload_rewritten IN (0, 1)),
+    idempotency_key TEXT NOT NULL UNIQUE,
+    created_at TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS memory_dream_proposals_v3 (
+    dream_run_id TEXT NOT NULL,
+    ordinal INTEGER NOT NULL CHECK(ordinal >= 0),
+    intake_id TEXT,
+    record_id TEXT NOT NULL,
+    episode_ids_json TEXT NOT NULL DEFAULT '[]',
+    status TEXT NOT NULL,
+    result_json TEXT NOT NULL DEFAULT '{}',
+    PRIMARY KEY(dream_run_id, ordinal),
+    FOREIGN KEY(dream_run_id)
+        REFERENCES memory_dream_runs_v3(dream_run_id) ON DELETE RESTRICT,
+    FOREIGN KEY(intake_id)
+        REFERENCES memory_intake_v3(intake_id) ON DELETE RESTRICT
+);
+
 CREATE VIEW IF NOT EXISTS memory_revision_state_v3 AS
 SELECT
     r.record_id,
@@ -369,4 +424,40 @@ WHEN NEW.lifecycle_state='current'
   )
 BEGIN
     SELECT RAISE(ABORT, 'record already has a current revision');
+END;
+
+CREATE TRIGGER IF NOT EXISTS memory_episodes_v3_no_update
+BEFORE UPDATE ON memory_episodes_v3
+BEGIN
+    SELECT RAISE(ABORT, 'memory_episodes_v3 is immutable');
+END;
+
+CREATE TRIGGER IF NOT EXISTS memory_episodes_v3_no_delete
+BEFORE DELETE ON memory_episodes_v3
+BEGIN
+    SELECT RAISE(ABORT, 'memory_episodes_v3 is immutable');
+END;
+
+CREATE TRIGGER IF NOT EXISTS memory_dream_runs_v3_no_update
+BEFORE UPDATE ON memory_dream_runs_v3
+BEGIN
+    SELECT RAISE(ABORT, 'memory_dream_runs_v3 is immutable');
+END;
+
+CREATE TRIGGER IF NOT EXISTS memory_dream_runs_v3_no_delete
+BEFORE DELETE ON memory_dream_runs_v3
+BEGIN
+    SELECT RAISE(ABORT, 'memory_dream_runs_v3 is immutable');
+END;
+
+CREATE TRIGGER IF NOT EXISTS memory_dream_proposals_v3_no_update
+BEFORE UPDATE ON memory_dream_proposals_v3
+BEGIN
+    SELECT RAISE(ABORT, 'memory_dream_proposals_v3 is immutable');
+END;
+
+CREATE TRIGGER IF NOT EXISTS memory_dream_proposals_v3_no_delete
+BEFORE DELETE ON memory_dream_proposals_v3
+BEGIN
+    SELECT RAISE(ABORT, 'memory_dream_proposals_v3 is immutable');
 END;

@@ -23,6 +23,12 @@ def validate_store(store: MemoryStore) -> dict[str, Any]:
             "LEFT JOIN memory_records_v3 r ON r.record_id=v.record_id "
             "WHERE r.record_id IS NULL"
         ).fetchall()
+        tables = {
+            row["name"]
+            for row in conn.execute(
+                "SELECT name FROM sqlite_master WHERE type='table'"
+            )
+        }
     checks = {
         "integrity_ok": integrity == "ok",
         "foreign_keys_ok": not foreign_keys,
@@ -34,6 +40,11 @@ def validate_store(store: MemoryStore) -> dict[str, Any]:
         "schema_version_current": (
             store.schema_info()["user_version"] == 3
         ),
+        "memory_dream_summary_pipeline_present": {
+            "memory_episodes_v3",
+            "memory_dream_runs_v3",
+            "memory_dream_proposals_v3",
+        }.issubset(tables),
     }
     return {
         "schema": "memory-core-doctor/v1",

@@ -83,3 +83,23 @@ The kernel does not own an agent's identity, relationship, private seeds,
 permission policy, truth authority, dream schedule, transport or product
 cutover. Consumers reuse the mechanism and keep separate profiles, evidence,
 databases and action gates.
+
+## Additive memory–dream–summary boundary
+
+The `memory-dream-summary/v1` extension remains inside the same schema-v3 and
+package-0.2 law:
+
+- bounded raw episodes append to an immutable archive;
+- transcript-shaped payloads are rejected unless the host explicitly opts in;
+- dream proposals enter through `ValidatedIntake`;
+- dream telemetry uses the separate maintenance path;
+- every pre-existing revision keeps the same semantic content hash;
+- deterministic summaries and Hermes files are projections of SQLite, not
+  writable memory authority;
+- read-only episode, summary and recall paths perform no initialization,
+  migration or access tracking;
+- packet and summary renderers enforce the full framing-inclusive budget.
+
+An initialized pre-extension schema-v3 database gains the additive tables only
+when `MemoryStore.initialize()` is explicitly invoked. Ordinary reads still
+perform no DDL.
